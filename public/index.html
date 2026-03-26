@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Court — ERC-8183 Evaluator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0a0a0f;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #12121a;
+      border-bottom: 1px solid #2a2a3a;
+      padding: 24px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .gavel { font-size: 32px; }
+
+    header h1 {
+      font-size: 24px;
+      color: #c0a0ff;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    header p {
+      font-size: 13px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    .court-info {
+      background: #12121a;
+      border: 1px solid #2a2a3a;
+      border-radius: 8px;
+      padding: 20px 32px;
+      margin: 24px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .court-info .label {
+      color: #888;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .court-info .address {
+      color: #c0a0ff;
+      font-size: 14px;
+      font-family: monospace;
+      word-break: break-all;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #00ff88;
+      animation: pulse 2s infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .section {
+      padding: 0 32px 32px;
+    }
+
+    .section h2 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #888;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #1a1a2a;
+    }
+
+    .verdict-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .verdict-card {
+      background: #12121a;
+      border: 1px solid #2a2a3a;
+      border-radius: 8px;
+      padding: 16px 20px;
+      transition: border-color 0.2s;
+    }
+
+    .verdict-card:hover {
+      border-color: #4a4a6a;
+    }
+
+    .verdict-card.complete {
+      border-left: 3px solid #00cc66;
+    }
+
+    .verdict-card.reject {
+      border-left: 3px solid #cc4444;
+    }
+
+    .verdict-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .job-id {
+      font-size: 13px;
+      color: #c0a0ff;
+      font-weight: bold;
+    }
+
+    .badge {
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .badge.complete { background: #003322; color: #00cc66; }
+    .badge.reject { background: #330011; color: #cc4444; }
+
+    .verdict-reasoning {
+      font-size: 13px;
+      color: #aaa;
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+
+    .verdict-meta {
+      font-size: 11px;
+      color: #555;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .verdict-meta a {
+      color: #6a6aaa;
+      text-decoration: none;
+    }
+
+    .verdict-meta a:hover { color: #c0a0ff; }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #444;
+    }
+
+    .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-state p { font-size: 14px; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 0 32px 24px;
+    }
+
+    .stat {
+      background: #12121a;
+      border: 1px solid #2a2a3a;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .stat .value {
+      font-size: 28px;
+      font-weight: bold;
+      color: #c0a0ff;
+    }
+
+    .stat .label {
+      font-size: 11px;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="gavel">⚖️</div>
+    <div>
+      <h1>Agent Court</h1>
+      <p>LLM-Powered ERC-8183 Job Evaluator</p>
+    </div>
+  </header>
+
+  <div class="court-info">
+    <div class="status-dot"></div>
+    <div>
+      <div class="label">Court Wallet Address</div>
+      <div class="address" id="court-address">Loading...</div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="value" id="stat-total">—</div>
+      <div class="label">Total Verdicts</div>
+    </div>
+    <div class="stat">
+      <div class="value" id="stat-complete" style="color: #00cc66;">—</div>
+      <div class="label">Completed</div>
+    </div>
+    <div class="stat">
+      <div class="value" id="stat-reject" style="color: #cc4444;">—</div>
+      <div class="label">Rejected</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Verdict History</h2>
+    <div class="verdict-list" id="verdict-list">
+      <div class="empty-state">
+        <div class="icon">⏳</div>
+        <p>Loading verdicts...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function loadData() {
+      try {
+        const [courtRes, verdictsRes] = await Promise.all([
+          fetch('/api/court'),
+          fetch('/api/verdicts'),
+        ]);
+        const court = await courtRes.json();
+        const verdicts = await verdictsRes.json();
+
+        document.getElementById('court-address').textContent = court.address;
+
+        const total = verdicts.length;
+        const completed = verdicts.filter(v => v.decision === 'complete').length;
+        const rejected = verdicts.filter(v => v.decision === 'reject').length;
+
+        document.getElementById('stat-total').textContent = total;
+        document.getElementById('stat-complete').textContent = completed;
+        document.getElementById('stat-reject').textContent = rejected;
+
+        const list = document.getElementById('verdict-list');
+
+        if (total === 0) {
+          list.innerHTML = `
+            <div class="empty-state">
+              <div class="icon">⚖️</div>
+              <p>No verdicts yet — Court is monitoring for submitted jobs</p>
+            </div>`;
+          return;
+        }
+
+        list.innerHTML = verdicts.map(v => `
+          <div class="verdict-card ${v.decision}">
+            <div class="verdict-header">
+              <div class="job-id">Job #${v.jobId}</div>
+              <span class="badge ${v.decision}">${v.decision === 'complete' ? '✓ Complete' : '✗ Rejected'}</span>
+            </div>
+            <div class="verdict-reasoning">${escapeHtml(v.reasoning)}</div>
+            <div class="verdict-meta">
+              <span>🕐 ${new Date(v.timestamp).toLocaleString()}</span>
+              <a href="${escapeHtml(v.deliverableUri)}" target="_blank" rel="noopener">📎 Deliverable</a>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        document.getElementById('verdict-list').innerHTML = `
+          <div class="empty-state">
+            <div class="icon">⚠️</div>
+            <p>Error loading data: ${err.message}</p>
+          </div>`;
+      }
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    loadData();
+    setInterval(loadData, 30000); // Refresh every 30s
+  </script>
+</body>
+</html>
