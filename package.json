@@ -1,0 +1,24 @@
+{
+  "name": "agent-court",
+  "version": "1.0.0",
+  "description": "LLM-Powered ERC-8183 Job Evaluator — autonomous AI judge for Obolos escrow",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node18 --outfile=dist/index.js --format=cjs --packages=external",
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2",
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.11.5",
+    "esbuild": "^0.27.4",
+    "tsx": "^4.0.0",
+    "typescript": "^5.3.3"
+  }
+}
